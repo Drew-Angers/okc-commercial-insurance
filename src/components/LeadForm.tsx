@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { ShieldCheck, Lock, BellOff, Clock, CheckCircle2 } from 'lucide-react'
+import { ShieldCheck, Lock, BellOff, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
 import type { LeadFormData } from '../types'
 
 const PROPERTY_TYPES = [
@@ -43,6 +43,7 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 
 export default function LeadForm() {
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState(false)
 
   const {
     register,
@@ -50,9 +51,40 @@ export default function LeadForm() {
     formState: { errors, isSubmitting },
   } = useForm<LeadFormData>()
 
-  function onSubmit(data: LeadFormData) {
-    console.log('Lead form submission:', data)
-    setSubmitted(true)
+  async function onSubmit(data: LeadFormData) {
+    setSubmitError(false)
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: import.meta.env.VITE_WEB3FORMS_KEY,
+          subject: `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`,
+          from_name: `${data.firstName} ${data.lastName}`,
+          replyto: data.email,
+          // submitter details
+          'First Name': data.firstName,
+          'Last Name': data.lastName,
+          Email: data.email,
+          Phone: data.phone,
+          'Property Type': data.propertyType,
+          'Property Value': data.propertyValue,
+          'Property Address': data.propertyAddress ?? '(not provided)',
+          // send confirmation email back to submitter
+          autoresponse: true,
+          autoresponse_message: `Hi ${data.firstName},\n\nThanks for reaching out! A licensed OKC broker will contact you within 1 business day to discuss coverage options for your ${data.propertyType.toLowerCase()}.\n\nIf you have an urgent question, call us at (405) 555-0100.\n\n— Oklahoma City Commercial Insurance`,
+          botcheck: '',
+        }),
+      })
+      const result: { success: boolean } = await response.json()
+      if (result.success) {
+        setSubmitted(true)
+      } else {
+        setSubmitError(true)
+      }
+    } catch {
+      setSubmitError(true)
+    }
   }
 
   return (
@@ -178,13 +210,20 @@ export default function LeadForm() {
                 </div>
               </div>
 
+              {submitError && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                  Something went wrong. Please try again or call us at (405) 555-0100.
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-6 w-full flex items-center justify-center gap-2 bg-[#1a3a5c] hover:bg-[#142d47] text-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-60"
+                className="mt-4 w-full flex items-center justify-center gap-2 bg-[#1a3a5c] hover:bg-[#142d47] text-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-60"
               >
                 <ShieldCheck className="w-5 h-5" strokeWidth={1.5} />
-                Connect me with a broker
+                {isSubmitting ? 'Sending…' : 'Connect me with a broker'}
               </button>
 
               <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs text-gray-500">
