@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useForm as useFormspree } from '@formspree/react'
 import { useForm } from 'react-hook-form'
 import { ShieldCheck, Lock, BellOff, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
 import type { LeadFormData } from '../types'
@@ -42,53 +42,32 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 }
 
 export default function LeadForm() {
-  const [submitted, setSubmitted] = useState(false)
-  const [submitError, setSubmitError] = useState(false)
+  const [formspreeState, formspreeSubmit] = useFormspree('xykorbyj')
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LeadFormData>()
 
-  async function onSubmit(data: LeadFormData) {
-    setSubmitError(false)
-    try {
-      const formData = new FormData()
-      formData.append('access_key', import.meta.env.VITE_WEB3FORMS_KEY)
-      formData.append('subject', `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`)
-      formData.append('from_name', `${data.firstName} ${data.lastName}`)
-      formData.append('replyto', data.email)
-      formData.append('First Name', data.firstName)
-      formData.append('Last Name', data.lastName)
-      formData.append('Email', data.email)
-      formData.append('Phone', data.phone)
-      formData.append('Property Type', data.propertyType)
-      formData.append('Property Value', data.propertyValue)
-      formData.append('Property Address', data.propertyAddress ?? '(not provided)')
-      formData.append('botcheck', '')
-
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: formData,
-      })
-      const result: { success: boolean; message?: string } = await response.json()
-      console.log('Web3Forms response:', result)
-      if (response.ok) {
-        setSubmitted(true)
-      } else {
-        setSubmitError(true)
-      }
-    } catch (err) {
-      console.error('Form submission error:', err)
-      setSubmitError(true)
-    }
-  }
+  const onSubmit = handleSubmit(async (data) => {
+    await formspreeSubmit({
+      _subject: `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`,
+      _replyto: data.email,
+      'First Name': data.firstName,
+      'Last Name': data.lastName,
+      Email: data.email,
+      Phone: data.phone,
+      'Property Type': data.propertyType,
+      'Property Value': data.propertyValue,
+      'Property Address': data.propertyAddress ?? '(not provided)',
+    })
+  })
 
   return (
     <div className="relative -mt-28 sm:-mt-36 z-10 max-w-2xl mx-auto mb-16">
       <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8">
-        {submitted ? (
+        {formspreeState.succeeded ? (
           <SuccessState />
         ) : (
           <>
@@ -99,9 +78,8 @@ export default function LeadForm() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <form onSubmit={onSubmit} noValidate>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* First name */}
                 <div>
                   <Label required>First name</Label>
                   <input
@@ -114,7 +92,6 @@ export default function LeadForm() {
                   <FieldError message={errors.firstName?.message} />
                 </div>
 
-                {/* Last name */}
                 <div>
                   <Label required>Last name</Label>
                   <input
@@ -127,7 +104,6 @@ export default function LeadForm() {
                   <FieldError message={errors.lastName?.message} />
                 </div>
 
-                {/* Email */}
                 <div>
                   <Label required>Email address</Label>
                   <input
@@ -146,7 +122,6 @@ export default function LeadForm() {
                   <FieldError message={errors.email?.message} />
                 </div>
 
-                {/* Phone */}
                 <div>
                   <Label required>Phone number</Label>
                   <input
@@ -165,7 +140,6 @@ export default function LeadForm() {
                   <FieldError message={errors.phone?.message} />
                 </div>
 
-                {/* Property type */}
                 <div>
                   <Label required>Property type</Label>
                   <select
@@ -180,7 +154,6 @@ export default function LeadForm() {
                   <FieldError message={errors.propertyType?.message} />
                 </div>
 
-                {/* Property value */}
                 <div>
                   <Label required>Estimated property value</Label>
                   <select
@@ -195,7 +168,6 @@ export default function LeadForm() {
                   <FieldError message={errors.propertyValue?.message} />
                 </div>
 
-                {/* Property address — full width, optional */}
                 <div className="sm:col-span-2">
                   <Label>Property address <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
                   <input
@@ -208,7 +180,7 @@ export default function LeadForm() {
                 </div>
               </div>
 
-              {submitError && (
+              {formspreeState.errors && formspreeState.errors.getFormErrors().length > 0 && (
                 <div className="mt-4 flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2.5">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
                   Something went wrong. Please try again or call us at (405) 555-0100.
@@ -217,11 +189,11 @@ export default function LeadForm() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={formspreeState.submitting}
                 className="mt-4 w-full flex items-center justify-center gap-2 bg-[#1a3a5c] hover:bg-[#142d47] text-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-60"
               >
                 <ShieldCheck className="w-5 h-5" strokeWidth={1.5} />
-                {isSubmitting ? 'Sending…' : 'Connect me with a broker'}
+                {formspreeState.submitting ? 'Sending…' : 'Connect me with a broker'}
               </button>
 
               <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs text-gray-500">
