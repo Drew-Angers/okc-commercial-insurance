@@ -54,27 +54,27 @@ export default function LeadForm() {
   async function onSubmit(data: LeadFormData) {
     setSubmitError(false)
     try {
+      const formData = new FormData()
+      formData.append('access_key', import.meta.env.VITE_WEB3FORMS_KEY)
+      formData.append('subject', `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`)
+      formData.append('from_name', `${data.firstName} ${data.lastName}`)
+      formData.append('replyto', data.email)
+      formData.append('First Name', data.firstName)
+      formData.append('Last Name', data.lastName)
+      formData.append('Email', data.email)
+      formData.append('Phone', data.phone)
+      formData.append('Property Type', data.propertyType)
+      formData.append('Property Value', data.propertyValue)
+      formData.append('Property Address', data.propertyAddress ?? '(not provided)')
+      formData.append('botcheck', '')
+
       const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          access_key: import.meta.env.VITE_WEB3FORMS_KEY,
-          subject: `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`,
-          from_name: `${data.firstName} ${data.lastName}`,
-          replyto: data.email,
-          'First Name': data.firstName,
-          'Last Name': data.lastName,
-          Email: data.email,
-          Phone: data.phone,
-          'Property Type': data.propertyType,
-          'Property Value': data.propertyValue,
-          'Property Address': data.propertyAddress ?? '(not provided)',
-          botcheck: '',
-        }),
+        body: formData,
       })
       const result: { success: boolean; message?: string } = await response.json()
       console.log('Web3Forms response:', result)
-      if (result.success) {
+      if (response.ok) {
         setSubmitted(true)
       } else {
         setSubmitError(true)
