@@ -62,7 +62,6 @@ export default function LeadForm() {
           subject: `New Quote Request — ${data.firstName} ${data.lastName} (${data.propertyType})`,
           from_name: `${data.firstName} ${data.lastName}`,
           replyto: data.email,
-          // submitter details
           'First Name': data.firstName,
           'Last Name': data.lastName,
           Email: data.email,
@@ -70,19 +69,18 @@ export default function LeadForm() {
           'Property Type': data.propertyType,
           'Property Value': data.propertyValue,
           'Property Address': data.propertyAddress ?? '(not provided)',
-          // send confirmation email back to submitter
-          autoresponse: true,
-          autoresponse_message: `Hi ${data.firstName},\n\nThanks for reaching out! A licensed OKC broker will contact you within 1 business day to discuss coverage options for your ${data.propertyType.toLowerCase()}.\n\nIf you have an urgent question, call us at (405) 555-0100.\n\n— Oklahoma City Commercial Insurance`,
           botcheck: '',
         }),
       })
-      const result: { success: boolean } = await response.json()
+      const result: { success: boolean; message?: string } = await response.json()
+      console.log('Web3Forms response:', result)
       if (result.success) {
         setSubmitted(true)
       } else {
         setSubmitError(true)
       }
-    } catch {
+    } catch (err) {
+      console.error('Form submission error:', err)
       setSubmitError(true)
     }
   }
